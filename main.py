@@ -1,58 +1,70 @@
-#!/usr/bin/python3
+import sys
+import logging
+from typing import Optional
 
-import numpy as np
+from PyQt5.QtWidgets import QWidget, QApplication, QLineEdit
+
+from game.ui.sudoku_pazzle import Ui_Form 
+from core.board import Board
 
 
-class Board:
-    """ The main board of table sudoku """
+class SudokuPazzle(QWidget):
+    """ The Sudoku Pazzle Widget which you will play game """
 
-    def __init__(self) -> None:
-        self.board = np.zeros((3, 3, 3, 3), dtype='int32') # main board of sudoku table
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        # Set the ui
+        self.ui = Ui_Form()
+        self.ui.setupUi(self)
+
+        self.ui.reload_puzzle.clicked.connect(self.fill_pazzle_ui)
+        
     
-    def put_numbers(self):
-        range_numbers = np.arange(1,10)
-        for irow, row in enumerate(self.board):
-            for icol, little_board in enumerate(row):
-                random_numbers = np.random.default_rng().choice(range_numbers, (3,3), replace=False)
-                self.board[irow, icol] = random_numbers
+    def fill_pazzle_ui(self):
+        self.board = Board()
+        self.board.fill_puzzle() # filling the puzzle
+
+        # get numbers/data :) finally
+        puzzle = self.board.get_puzzle()
+        
+        # set the number in ui table
+        for irow, row in enumerate(puzzle):
+            for icol, col in enumerate(row):
+                line_edit = self.get_item_puzzle_ui(irow, icol)
+                if line_edit:
+                    if col != 0:
+                        line_edit.setText(str(col))
+                        line_edit.setReadOnly(True)
+                        line_edit.setStyleSheet('background-color:#5aea84;color:#fff')
+                    else:
+                        line_edit.setText("H")
+                        line_edit.setReadOnly(False)
+                        line_edit.setStyleSheet('background-color:#fff;color:#000')
+
+
+    def get_item_puzzle_ui(self, irow: int = None, icol: int = None) -> Optional[QLineEdit]:
+        """
+            Return the specific item in the puzzle ui
+
+            params:
+                irow: index_row of self.board
+                icol: index_column of self.board
+
+            reslut:
+                return getattr(self.ui, f'lineEdit_{irow}{icol}{ielement}{inumber}')
+        """
+        line_edit = getattr(self.ui, f'lineEdit_{irow}{icol}')
+        if line_edit:
+            return line_edit
+
+
+
+if __name__ == '__main__': # Run the game
+    app = QApplication(sys.argv)
     
-    def get_table(self) -> np.array:
-        return self.board
+    sudoku_pazzle = SudokuPazzle()
+    sudoku_pazzle.fill_pazzle_ui()
+    sudoku_pazzle.show()
 
-    def table_validation(self) -> None:
-        """
-        This method will some validation proccess for table
-        The roles of sudoku game says: in each ``little_board`` 
-        should not be a number that count of that number in row, col, and little_table more than one
-        so this method:
-            checks the role game.
-            then will stores all numbers that count of them is more than one with theire positions 
-        """
-
-        for irow, row in enumerate(self.board):
-            for icol, little_board in enumerate(row):
-                for ielement, element in enumerate(little_board):
-                    for inum, number in enumerate(element):
-                        horizantal_numbers = self.board[irow, :, ielement, :]
-                        vertical_numbers = self.board[:, icol, :, inum]
-                        count_num_in_horizantal = np.count_nonzero(horizantal_numbers == number)
-                        count_num_in_vertical = np.count_nonzero(vertical_numbers == number)
-                        if count_num_in_horizantal > 1:
-                            # count this num in horizantal line is more than one
-                            print(number, f'horizantal:{count_num_in_horizantal}')
-                        if count_num_in_vertical > 1:
-                            # count this num in vertical line is more than one
-                            print(number, f'vertical:{count_num_in_vertical}')
-
-                        # So i have done this part of program
-                        # actually i found the count of numbers in horizantal and vertical line
-                        # and now i should replace the numbers
-                        # that if i replaced them with other number everything should be alright :(
-                        # so that is dificult part of this program
-
-
-
-b1 = Board()
-b1.put_numbers()
-print(b1.get_table())
-b1.table_validation()
+    sys.exit(app.exec_())
